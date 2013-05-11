@@ -8,13 +8,14 @@
 #define MY_UUID { 0x3A, 0xE8, 0xC5, 0x47, 0xC9, 0xBB, 0x4E, 0x7E, 0xA9, 0x63, 0xDC, 0x68, 0x79, 0x77, 0x70, 0xD0 }
 PBL_APP_INFO(MY_UUID,
 	 "Minimalist", "Jnm",
-	 1, 2, /* App version */
+	 1, 3, /* App version */
 	 RESOURCE_ID_IMAGE_MENU_ICON,
 	 APP_INFO_WATCH_FACE);
 
 #define DRAW_CIRCLE true
 #define DIGIT_SIZE 20
 #define DIGIT_SPACE 2
+#define MINUTES_AT_HOUR_HAND true
 
 #define SCREENW 144
 #define SCREENH 168
@@ -32,9 +33,46 @@ HeapBitmap digitBmp[NUM_IMAGES];
 Window window;
 Layer layer;
 bool clock12;
+int y = CY-DIGIT_SIZE/2;
 
+#if MINUTES_AT_HOUR_HAND
 void update_display(Layer *layer, GContext *ctx) {
-	static int y = CY-DIGIT_SIZE/2;
+	static GPoint center = { CX, CY };
+	int i, a, digit[4], x;
+	PblTm now;
+
+	get_time(&now);
+
+	now.tm_hour = now.tm_hour%12;
+
+	digit[0] = now.tm_min/10;
+        digit[1] = now.tm_min%10;
+
+	bmpFillRect(&bitmap, GRect(0,CY-DIGIT_SIZE/2,SCREENW,DIGIT_SIZE), GColorBlack);
+
+	if (now.tm_hour < 6) {
+		a = 30*(now.tm_hour-3) + now.tm_min/2;
+	} else {
+		a = 30*(now.tm_hour-9) + now.tm_min/2;
+	}
+
+	for (i=0;i<2;i++) {
+		if (now.tm_hour < 6) {
+			x = CX + 69 + (i-2)*(DIGIT_SIZE+DIGIT_SPACE);
+		} else {
+			x = CX - 69 + DIGIT_SPACE + i*(DIGIT_SIZE+DIGIT_SPACE);
+		}
+		bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, y));
+	}
+	bmpRotate(&bitmap, &bitmap2, a, GPoint(CX,CY), GPoint(0,0));
+#if DRAW_CIRCLE
+	bmpDrawCircle(&bitmap2, center, SCREENW/2-2, GColorWhite);
+	bmpDrawCircle(&bitmap2, center, SCREENW/2-1, GColorWhite);
+#endif
+	graphics_draw_bitmap_in_rect(ctx, &bitmap2, GRect(0,0,SCREENW,SCREENH));
+}
+#else
+void update_display(Layer *layer, GContext *ctx) {
 	static GPoint center = { CX, CY };
 	int i, a, digit[4], x;
 	PblTm now;
@@ -81,6 +119,7 @@ void update_display(Layer *layer, GContext *ctx) {
 #endif
 	graphics_draw_bitmap_in_rect(ctx, &bitmap2, GRect(0,0,SCREENW,SCREENH));
 }
+#endif
 
 void handle_tick(AppContextRef ctx, PebbleTickEvent *e) {
 	layer_mark_dirty(&layer);
