@@ -1,6 +1,10 @@
 #define TRIG_MAX (1<<24)
 #define TRIG_NORM(v) (v>>24)
 
+/*\
+|*| bmpDrawArc function thanks to Cameron MacFarland (http://forums.getpebble.com/profile/12561/Cameron%20MacFarland)
+\*/
+
 const int32_t _sin_[91] = {
 0, 292802, 585516, 878051, 1170319, 1462230, 1753696, 2044628, 2334937, 2624534, 2913332, 3201243, 3488179, 3774052, 4058775, 4342263, 4624427, 4905183, 5184444, 5462127, 5738145, 6012416, 6284855, 6555380, 6823908, 7090357, 7354647, 7616696, 7876425, 8133755, 8388607, 8640905, 8890569, 9137526, 9381700, 9623015, 9861400, 10096780, 10329085, 10558244, 10784186, 11006844, 11226148, 11442033, 11654433, 11863283, 12068519, 12270079, 12467901, 12661925, 12852093, 13038345, 13220626, 13398880, 13573052, 13743090, 13908942, 14070557, 14227886, 14380880, 14529495, 14673683, 14813402, 14948608, 15079261, 15205321, 15326749, 15443508, 15555563, 15662880, 15765426, 15863169, 15956080, 16044131, 16127295, 16205546, 16278860, 16347217, 16410593, 16468971, 16522332, 16570660, 16613941, 16652161, 16685308, 16713373, 16736347, 16754223, 16766995, 16774660, 16777216
 };
@@ -260,6 +264,51 @@ static void bmpDrawLine(GBitmap *bmp, GPoint p1, GPoint p2, GColor c) {
 					if (p1.y == p2.y) break;
 				}
             }
+		}
+	}
+}
+/*\
+|*| bmpDrawArc function thanks to Cameron MacFarland (http://forums.getpebble.com/profile/12561/Cameron%20MacFarland)
+\*/
+static void bmpDrawArc(GBitmap *bmp, GPoint center, int r, int t, int s, int e, GColor c) {
+	s = s%360;
+	e = e%360;
+ 
+	while (s < 0) s += 360;
+	while (e < 0) e += 360;
+ 
+	if (e == 0) e = 360;
+
+	float sslope = (float)_COS(s) / (float)_SIN(s);
+	float eslope = (float)_COS(e) / (float)_SIN(e);
+ 
+	if (e == 360) eslope = -1000000;
+ 
+	int ir2 = (r - t) * (r - t);
+	int or2 = r * r;
+ 
+	for (int x = -r; x <= r; x++) {
+		for (int y = -r; y <= r; y++)
+		{
+			int x2 = x * x;
+			int y2 = y * y;
+ 
+			if (
+				(x2 + y2 < or2 && x2 + y2 >= ir2) && (
+					(y > 0 && s < 180 && x <= y * sslope) ||
+					(y < 0 && s > 180 && x >= y * sslope) ||
+					(y < 0 && s <= 180) ||
+					(y == 0 && s <= 180 && x < 0) ||
+					(y == 0 && s == 0 && x > 0)
+				) && (
+					(y > 0 && e < 180 && x >= y * eslope) ||
+					(y < 0 && e > 180 && x <= y * eslope) ||
+					(y > 0 && e >= 180) ||
+					(y == 0 && e >= 180 && x < 0) ||
+					(y == 0 && s == 0 && x > 0)
+				)
+			)
+			bmpPutPixel(bmp, center.x+x, center.y+y, c);
 		}
 	}
 }
