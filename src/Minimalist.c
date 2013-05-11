@@ -8,7 +8,7 @@
 #define MY_UUID { 0x3A, 0xE8, 0xC5, 0x47, 0xC9, 0xBB, 0x4E, 0x7E, 0xA9, 0x63, 0xDC, 0x68, 0x79, 0x77, 0x70, 0xD0 }
 PBL_APP_INFO(MY_UUID,
 	 "Minimalist", "Jnm",
-	 1, 1, /* App version */
+	 1, 2, /* App version */
 	 RESOURCE_ID_IMAGE_MENU_ICON,
 	 APP_INFO_WATCH_FACE);
 
@@ -64,7 +64,11 @@ void update_display(Layer *layer, GContext *ctx) {
 			if (now.tm_min < 30) {
 				x = CX-DIGIT_SIZE+(DIGIT_SIZE+DIGIT_SPACE)*i+(DIGIT_SPACE*(i>1));
 			} else {
-				x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(4-i)-(DIGIT_SPACE*(i<2));
+				if (digit[0] == 0) {
+					x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(5-i)-(DIGIT_SPACE*(i<2));
+				} else {
+					x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(4-i)-(DIGIT_SPACE*(i<2));
+				}
 			}
 			bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, y));
 		}
