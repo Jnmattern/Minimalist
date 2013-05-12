@@ -369,6 +369,9 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GPoint srcCenter,
 	int x, y, xx, yy, c;
 	int32_t cosphi, sinphi, xo, yo, rx, ry;
     
+	while (a<0) {
+		a += 360;
+	}
 	a = a%360;
     a = 360-a;
     
@@ -378,7 +381,7 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GPoint srcCenter,
     for (x=0; x<w; x++) {
         for (y=0; y<h; y++) {
             xo = x - dstOffset.x - srcCenter.x;
-            yo = y - dstOffset.x - srcCenter.y;
+            yo = y - dstOffset.y - srcCenter.y;
             rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
             ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
             xx = rx + srcCenter.x;
