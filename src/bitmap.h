@@ -81,6 +81,16 @@ static inline void bmpFillRect(GBitmap *bmp, GRect rect, GColor c) {
     }    
 }
 
+static inline void bmpFill(GBitmap *bmp, GColor c) {
+	int i, l = bmp->row_size_bytes*bmp->bounds.size.h;
+	uint8_t p = 0xff * c;
+	uint8_t *d = bmp->addr;
+	
+	for (i=0; i<l; i++) {
+		d[i] = c;
+	}
+}
+
 
 static void bmpDrawLine(GBitmap *bmp, GPoint p1, GPoint p2, GColor c) {
 	int dx, dy, e;

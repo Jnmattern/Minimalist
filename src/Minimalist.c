@@ -59,7 +59,7 @@ void update_display(Layer *layer, GContext *ctx) {
 		digit[0] = now.tm_min/10;
 		digit[1] = now.tm_min%10;
 		
-		bmpFillRect(&bitmap, bitmap.bounds, GColorBlack);
+		bmpFill(&bitmap, GColorBlack);
 		
 		if (now.tm_hour < 6) {
 			a = 30*(now.tm_hour-3) + now.tm_min/2;
@@ -86,7 +86,7 @@ void update_display(Layer *layer, GContext *ctx) {
 		digit[2] = now.tm_min/10;
 		digit[3] = now.tm_min%10;
 		
-		bmpFillRect(&bitmap, bitmap.bounds, GColorBlack);
+		bmpFill(&bitmap, GColorBlack);
 		
 		if (now.tm_min < 30) {
 			a = 6*(now.tm_min-15);
@@ -109,7 +109,7 @@ void update_display(Layer *layer, GContext *ctx) {
 			}
 		}
 #endif
-		bmpFillRect(&bitmap2, bitmap2.bounds, GColorBlack);
+		bmpFill(&bitmap2, GColorBlack);
 		bmpRotate(&bitmap, &bitmap2, a, grect_center_point(&bitmap.bounds), GPoint(0,CX-bitmap.bounds.size.h/2));
 		
 		bmpDrawArc(&bitmap2, center, SCREENW/2-1, 2, 0, 360, GColorWhite);
