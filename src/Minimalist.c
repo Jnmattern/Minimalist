@@ -8,7 +8,7 @@
 #define MY_UUID { 0x3A, 0xE8, 0xC5, 0x47, 0xC9, 0xBB, 0x4E, 0x7E, 0xA9, 0x63, 0xDC, 0x68, 0x79, 0x77, 0x70, 0xD0 }
 PBL_APP_INFO(MY_UUID,
 			 "Minimalist", "Jnm",
-			 1, 5, /* App version */
+			 1, 6, /* App version */
 			 RESOURCE_ID_IMAGE_MENU_ICON,
 			 APP_INFO_WATCH_FACE);
 
@@ -73,7 +73,7 @@ void update_display(Layer *layer, GContext *ctx) {
 			} else {
 				x = CX - 69 + DIGIT_SPACE + i*(DIGIT_SIZE+DIGIT_SPACE);
 			}
-			bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 2));
+			bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
 		}
 #else
 		if (clock12) {
@@ -105,11 +105,11 @@ void update_display(Layer *layer, GContext *ctx) {
 						x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(4-i)-(DIGIT_SPACE*(i<2));
 					}
 				}
-				bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 2));
+				bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
 			}
 		}
 #endif
-		
+		bmpFillRect(&bitmap2, bitmap2.bounds, GColorBlack);
 		bmpRotate(&bitmap, &bitmap2, a, grect_center_point(&bitmap.bounds), GPoint(0,CX-bitmap.bounds.size.h/2));
 		
 		bmpDrawArc(&bitmap2, center, SCREENW/2-1, 2, 0, 360, GColorWhite);
