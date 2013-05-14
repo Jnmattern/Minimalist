@@ -16,6 +16,7 @@ PBL_APP_INFO(MY_UUID,
 #define DIGIT_SIZE 20
 #define DIGIT_SPACE 2
 #define MINUTES_AT_HOUR_HAND true
+#define HOUR_AT_MINUTE_HAND false
 
 #define SCREENW 144
 #define SCREENH 168
@@ -46,6 +47,7 @@ static inline void drawSec(GBitmap *bmp, GPoint center, int a1, int a2, GColor c
 
 void update_display(Layer *layer, GContext *ctx) {
 	static GPoint center = { CX, CX };
+	static GRect clipRect = { {0, 0}, {SCREENW, DIGIT_SIZE} };
 	int i, a, digit[4], x;
 	PblTm now;
 	
@@ -63,54 +65,90 @@ void update_display(Layer *layer, GContext *ctx) {
 		
 		if (now.tm_hour < 6) {
 			a = 30*(now.tm_hour-3) + now.tm_min/2;
+			for (i=0;i<2;i++) {
+				x = CX + 69 + (i-2)*(DIGIT_SIZE+DIGIT_SPACE);
+				bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
+			}
+			clipRect.origin.x = CX + 69 - 2*(DIGIT_SIZE+DIGIT_SPACE);
 		} else {
 			a = 30*(now.tm_hour-9) + now.tm_min/2;
-		}
-		
-		for (i=0;i<2;i++) {
-			if (now.tm_hour < 6) {
-				x = CX + 69 + (i-2)*(DIGIT_SIZE+DIGIT_SPACE);
-			} else {
+			for (i=0;i<2;i++) {
 				x = CX - 69 + DIGIT_SPACE + i*(DIGIT_SIZE+DIGIT_SPACE);
+				bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
 			}
-			bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
+			clipRect.origin.x = CX - 69 + DIGIT_SPACE;
 		}
-#else
+		clipRect.size.w = 2*DIGIT_SIZE + DIGIT_SPACE;
+		
+#else // MINUTES_AT_HOUR_HAND
 		if (clock12) {
 			now.tm_hour = now.tm_hour%12;
 			if (now.tm_hour == 0) now.tm_hour = 12;
 		}
-		
+#if HOUR_AT_MINUTE_HAND
+		digit[0] = now.tm_hour/10;
+		digit[1] = now.tm_hour%10;
+#else // HOUR_AT_MINUTE_HAND
 		digit[0] = now.tm_hour/10;
 		digit[1] = now.tm_hour%10;
 		digit[2] = now.tm_min/10;
 		digit[3] = now.tm_min%10;
+#endif // HOUR_AT_MINUTE_HAND
 		
 		bmpFill(&bitmap, GColorBlack);
 		
 		if (now.tm_min < 30) {
 			a = 6*(now.tm_min-15);
+#if HOUR_AT_MINUTE_HAND
+			for (i=0; i<2; i++) {
+				if (i != 0 || digit[i] != 0) {
+					x = CX + 69 + (i-2)*(DIGIT_SIZE+DIGIT_SPACE);
+					bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
+				}
+			}
+			clipRect.origin.x = CX + 69 - 2*(DIGIT_SIZE+DIGIT_SPACE);
+#else // HOUR_AT_MINUTE_HAND
+			for (i=0; i<4; i++) {
+				if (i != 0 || digit[i] != 0) {
+					x = CX-DIGIT_SIZE+(DIGIT_SIZE+DIGIT_SPACE)*i+(DIGIT_SPACE*(i>1));
+					bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
+				}
+			}
+			clipRect.origin.x = CX - DIGIT_SIZE;
+#endif // HOUR_AT_MINUTE_HAND
 		} else {
 			a = 6*(now.tm_min-45);
-		}
-		
-		for (i=0; i<4; i++) {
-			if (i != 0 || digit[i] != 0) {
-				if (now.tm_min < 30) {
-					x = CX-DIGIT_SIZE+(DIGIT_SIZE+DIGIT_SPACE)*i+(DIGIT_SPACE*(i>1));
-				} else {
+#if HOUR_AT_MINUTE_HAND
+			for (i=0; i<2; i++) {
+				if (i != 0 || digit[i] != 0) {
 					if (digit[0] == 0) {
 						x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(5-i)-(DIGIT_SPACE*(i<2));
 					} else {
 						x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(4-i)-(DIGIT_SPACE*(i<2));
 					}
+					bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
 				}
-				bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
 			}
+			clipRect.origin.x = CX - 4*DIGIT_SPACE - 3*DIGIT_SIZE + 1;
+#else // HOUR_AT_MINUTE_HAND
+			for (i=0; i<4; i++) {
+				if (i != 0 || digit[i] != 0) {
+					if (digit[0] == 0) {
+						x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(5-i)-(DIGIT_SPACE*(i<2));
+					} else {
+						x = CX+DIGIT_SPACE+1+DIGIT_SIZE-(DIGIT_SIZE+DIGIT_SPACE)*(4-i)-(DIGIT_SPACE*(i<2));
+					}
+					bmpSub(&digitBmp[digit[i]].bmp, &bitmap, digitBmp[digit[i]].bmp.bounds, GPoint(x, 0));
+				}
+			}
+			clipRect.origin.x = CX - 4*DIGIT_SPACE - 3*DIGIT_SIZE + 1;
+#endif // HOUR_AT_MINUTE_HAND
 		}
-#endif
+		clipRect.size.w = 4*(DIGIT_SIZE + DIGIT_SPACE);
+		
+#endif // HOUR_AT_MINUTE_HAND
 		bmpFill(&bitmap2, GColorBlack);
-		bmpRotate(&bitmap, &bitmap2, a, grect_center_point(&bitmap.bounds), GPoint(0,CX-bitmap.bounds.size.h/2));
+		bmpRotate(&bitmap, &bitmap2, a, &clipRect, grect_center_point(&bitmap.bounds), GPoint(0,CX-bitmap.bounds.size.h/2));
 		
 		bmpDrawArc(&bitmap2, center, SCREENW/2-1, 2, 0, 360, GColorWhite);
 #if DRAW_SECONDS

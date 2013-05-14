@@ -87,7 +87,7 @@ static inline void bmpFill(GBitmap *bmp, GColor c) {
 	uint8_t *d = bmp->addr;
 	
 	for (i=0; i<l; i++) {
-		d[i] = c;
+		d[i] = p;
 	}
 }
 
@@ -373,32 +373,81 @@ static void bmpFillCircle(GBitmap *bmp, GPoint center, int r, GColor c) {
 	}
 }
 
-static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GPoint srcCenter, GPoint dstOffset) {
-	int w = dst->bounds.size.w;
-	int h = dst->bounds.size.h;
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#define MAX(a, b) (((a)<(b))?(b):(a))
+
+static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRect, GPoint srcCenter, GPoint dstOffset) {
+	int i;
 	int x, y, xx, yy, c;
+	int xmin = 100000, xmax = -100000, ymin = 100000, ymax = -100000;
 	int32_t cosphi, sinphi, xo, yo, rx, ry;
-    
+	GPoint srcCorner[4], dstCorner[4];
+
+	// Normalize angle so that 0 <= a < 360
 	while (a<0) {
 		a += 360;
 	}
 	a = a%360;
-    a = 360-a;
+
+	// Compute the 4 corners' coordinates of the src bitmap (or clipping rect if provided) once rotated into the dst bitmap
+	// (0,0)        (w,0)
+	//   +------------+
+	//   |0          1|
+	//   |2          3|
+	//   +------------+
+	// (0,h)        (w,h)
+
+	if (srcClipRect == NULL) {
+		srcCorner[0] = GPoint(0,0);
+		srcCorner[1] = GPoint(src->bounds.size.w,0);
+		srcCorner[2] = GPoint(0,src->bounds.size.h);
+		srcCorner[3] = GPoint(src->bounds.size.w,src->bounds.size.h);
+	} else {
+		srcCorner[0] = GPoint(srcClipRect->origin.x, srcClipRect->origin.y);
+		srcCorner[1] = GPoint(srcClipRect->origin.x + srcClipRect->size.w, srcClipRect->origin.y);
+		srcCorner[2] = GPoint(srcClipRect->origin.x, srcClipRect->origin.y + srcClipRect->size.h);
+		srcCorner[3] = GPoint(srcClipRect->origin.x + srcClipRect->size.w, srcClipRect->origin.y + srcClipRect->size.h);
+	}
+
+	cosphi = _COS(a);
+	sinphi = _SIN(a);
+	for (i=0; i<4; i++) {
+		xo = srcCorner[i].x - srcCenter.x;
+		yo = srcCorner[i].y - srcCenter.y;
+		rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
+		ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
+		dstCorner[i].x = rx + srcCenter.x + dstOffset.x;
+		dstCorner[i].y = ry + srcCenter.y + dstOffset.y;
+		// Keep min & max for clipping
+		xmin = MIN(xmin,dstCorner[i].x);
+		ymin = MIN(ymin,dstCorner[i].y);
+		xmax = MAX(xmax,dstCorner[i].x);
+		ymax = MAX(ymax,dstCorner[i].y);
+	}
+
+	// Take 1 pixel more because of int rounding errors
+	xmin--; ymin--; xmax++; ymax++;
+	// stay in the limits to the dst bitmap
+	if (xmin < 0) xmin = 0;
+	if (ymin < 0) ymin = 0;
+	if (xmax > dst->bounds.size.w) xmax = dst->bounds.size.w;
+	if (ymax > dst->bounds.size.h) ymax = dst->bounds.size.h;
+
+	// Only loop into rotated coordinates of the dst bitmap into the (xmin,ymin)/(xmax,ymax) rect
+	// and get for each dst pixel the corresponding src pixel
+	sinphi = -sinphi;
     
-    cosphi = _COS(a);
-    sinphi = _SIN(a);
-    
-    for (x=0; x<w; x++) {
-        for (y=0; y<h; y++) {
-            xo = x - dstOffset.x - srcCenter.x;
-            yo = y - dstOffset.y - srcCenter.y;
-            rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
-            ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
-            xx = rx + srcCenter.x;
-            yy = ry + srcCenter.y;
-            c = bmpGetPixel(src, xx, yy);
-            if (c >= 0) bmpPutPixel(dst, x, y, c);
-        }
-    }
+	for (x=xmin; x<=xmax; x++) {
+		for (y=ymin; y<=ymax; y++) {
+			xo = x - dstOffset.x - srcCenter.x;
+			yo = y - dstOffset.y - srcCenter.y;
+			rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
+			ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
+			xx = rx + srcCenter.x;
+			yy = ry + srcCenter.y;
+			c = bmpGetPixel(src, xx, yy);
+			if (c >= 0) bmpPutPixel(dst, x, y, c);
+		}
+	}
 }
 
