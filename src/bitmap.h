@@ -1,12 +1,19 @@
 #define TRIG_MAX (1<<24)
-#define TRIG_NORM(v) (v>>24)
+#define TRIG_NORM(v) ((v)>>24)
 
 /*\
 |*| bmpDrawArc function thanks to Cameron MacFarland (http://forums.getpebble.com/profile/12561/Cameron%20MacFarland)
 \*/
 
 const int32_t _sin_[91] = {
-0, 292802, 585516, 878051, 1170319, 1462230, 1753696, 2044628, 2334937, 2624534, 2913332, 3201243, 3488179, 3774052, 4058775, 4342263, 4624427, 4905183, 5184444, 5462127, 5738145, 6012416, 6284855, 6555380, 6823908, 7090357, 7354647, 7616696, 7876425, 8133755, 8388607, 8640905, 8890569, 9137526, 9381700, 9623015, 9861400, 10096780, 10329085, 10558244, 10784186, 11006844, 11226148, 11442033, 11654433, 11863283, 12068519, 12270079, 12467901, 12661925, 12852093, 13038345, 13220626, 13398880, 13573052, 13743090, 13908942, 14070557, 14227886, 14380880, 14529495, 14673683, 14813402, 14948608, 15079261, 15205321, 15326749, 15443508, 15555563, 15662880, 15765426, 15863169, 15956080, 16044131, 16127295, 16205546, 16278860, 16347217, 16410593, 16468971, 16522332, 16570660, 16613941, 16652161, 16685308, 16713373, 16736347, 16754223, 16766995, 16774660, 16777216
+	0, 292802, 585516, 878051, 1170319, 1462230, 1753696, 2044628, 2334937, 2624534, 2913332, 3201243, 3488179, 3774052,
+	4058775, 4342263, 4624427, 4905183, 5184444, 5462127, 5738145, 6012416, 6284855, 6555380, 6823908, 7090357, 7354647,
+	7616696, 7876425, 8133755, 8388607, 8640905, 8890569, 9137526, 9381700, 9623015, 9861400, 10096780, 10329085, 10558244,
+	10784186, 11006844, 11226148, 11442033, 11654433, 11863283, 12068519, 12270079, 12467901, 12661925, 12852093, 13038345,
+	13220626, 13398880, 13573052, 13743090, 13908942, 14070557, 14227886, 14380880, 14529495, 14673683, 14813402, 14948608,
+	15079261, 15205321, 15326749, 15443508, 15555563, 15662880, 15765426, 15863169, 15956080, 16044131, 16127295, 16205546,
+	16278860, 16347217, 16410593, 16468971, 16522332, 16570660, 16613941, 16652161, 16685308, 16713373, 16736347, 16754223,
+	16766995, 16774660, 16777216
 };
 
 
@@ -380,7 +387,7 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 	int i;
 	int x, y, xx, yy, c;
 	int xmin = 100000, xmax = -100000, ymin = 100000, ymax = -100000;
-	int32_t cosphi, sinphi, xo, yo, rx, ry;
+	int32_t cosphi, sinphi, xc, xs, xo, yo, rx, ry;
 	GPoint srcCorner[4], dstCorner[4];
 
 	// Normalize angle so that 0 <= a < 360
@@ -414,8 +421,8 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 	for (i=0; i<4; i++) {
 		xo = srcCorner[i].x - srcCenter.x;
 		yo = srcCorner[i].y - srcCenter.y;
-		rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
-		ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
+		rx = TRIG_NORM(xo*cosphi - yo*sinphi);
+		ry = TRIG_NORM(xo*sinphi + yo*cosphi);
 		dstCorner[i].x = rx + srcCenter.x + dstOffset.x;
 		dstCorner[i].y = ry + srcCenter.y + dstOffset.y;
 		// Keep min & max for clipping
@@ -438,11 +445,13 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 	sinphi = -sinphi;
     
 	for (x=xmin; x<=xmax; x++) {
+		xo = x - dstOffset.x - srcCenter.x;
+		xc = xo*cosphi;
+		xs = xo*sinphi;
 		for (y=ymin; y<=ymax; y++) {
-			xo = x - dstOffset.x - srcCenter.x;
 			yo = y - dstOffset.y - srcCenter.y;
-			rx = TRIG_NORM(xo*cosphi) - TRIG_NORM(yo*sinphi);
-			ry = TRIG_NORM(xo*sinphi) + TRIG_NORM(yo*cosphi);
+			rx = TRIG_NORM(xc - yo*sinphi);
+			ry = TRIG_NORM(xs + yo*cosphi);
 			xx = rx + srcCenter.x;
 			yy = ry + srcCenter.y;
 			c = bmpGetPixel(src, xx, yy);
