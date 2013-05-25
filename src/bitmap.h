@@ -1,5 +1,6 @@
 #define TRIG_MAX (1<<24)
 #define TRIG_NORM(v) ((v)>>24)
+#define TRIG_MULT(v) ((v)<<24)
 
 /*\
 |*| bmpDrawArc function thanks to Cameron MacFarland (http://forums.getpebble.com/profile/12561/Cameron%20MacFarland)
@@ -385,9 +386,9 @@ static void bmpFillCircle(GBitmap *bmp, GPoint center, int r, GColor c) {
 
 static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRect, GPoint srcCenter, GPoint dstOffset) {
 	int i;
-	int x, y, xx, yy, c;
+	int x, y, c;
 	int xmin = 100000, xmax = -100000, ymin = 100000, ymax = -100000;
-	int32_t cosphi, sinphi, xc, xs, xo, yo, rx, ry;
+	int32_t cosphi, sinphi, xc, xs, yc, ys, xo, yo, xx, yy;
 	GPoint srcCorner[4], dstCorner[4];
 
 	// Normalize angle so that 0 <= a < 360
@@ -421,10 +422,8 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 	for (i=0; i<4; i++) {
 		xo = srcCorner[i].x - srcCenter.x;
 		yo = srcCorner[i].y - srcCenter.y;
-		rx = TRIG_NORM(xo*cosphi - yo*sinphi);
-		ry = TRIG_NORM(xo*sinphi + yo*cosphi);
-		dstCorner[i].x = rx + srcCenter.x + dstOffset.x;
-		dstCorner[i].y = ry + srcCenter.y + dstOffset.y;
+		dstCorner[i].x = TRIG_NORM(xo*cosphi - yo*sinphi) + srcCenter.x + dstOffset.x;
+		dstCorner[i].y = TRIG_NORM(xo*sinphi + yo*cosphi) + srcCenter.y + dstOffset.y;
 		// Keep min & max for clipping
 		xmin = MIN(xmin,dstCorner[i].x);
 		ymin = MIN(ymin,dstCorner[i].y);
@@ -434,7 +433,7 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 
 	// Take 1 pixel more because of int rounding errors
 	xmin--; ymin--; xmax++; ymax++;
-	// stay in the limits to the dst bitmap
+	// stay in the limits of the dst bitmap
 	if (xmin < 0) xmin = 0;
 	if (ymin < 0) ymin = 0;
 	if (xmax > dst->bounds.size.w) xmax = dst->bounds.size.w;
@@ -443,20 +442,23 @@ static void bmpRotate(const GBitmap *src, GBitmap *dst, int a, GRect *srcClipRec
 	// Only loop into rotated coordinates of the dst bitmap into the (xmin,ymin)/(xmax,ymax) rect
 	// and get for each dst pixel the corresponding src pixel
 	sinphi = -sinphi;
-    
-	for (x=xmin; x<=xmax; x++) {
-		xo = x - dstOffset.x - srcCenter.x;
-		xc = xo*cosphi;
-		xs = xo*sinphi;
-		for (y=ymin; y<=ymax; y++) {
-			yo = y - dstOffset.y - srcCenter.y;
-			rx = TRIG_NORM(xc - yo*sinphi);
-			ry = TRIG_NORM(xs + yo*cosphi);
-			xx = rx + srcCenter.x;
-			yy = ry + srcCenter.y;
-			c = bmpGetPixel(src, xx, yy);
+	xo = xmin - dstOffset.x - srcCenter.x;
+	xc = xo*cosphi;
+	xs = xo*sinphi;
+	yo = ymin - dstOffset.y - srcCenter.y;
+	yc = yo*cosphi;
+	ys = yo*sinphi;
+	for (y=ymin; y<=ymax; y++) {
+		xx = xc - ys;
+		yy = xs + yc;
+		for (x=xmin; x<=xmax; x++) {
+			c = bmpGetPixel(src, TRIG_NORM(xx) + srcCenter.x, TRIG_NORM(yy) + srcCenter.y);
 			if (c >= 0) bmpPutPixel(dst, x, y, c);
+			xx += cosphi;
+			yy += sinphi;
 		}
+		yc += cosphi;
+		ys += sinphi;
 	}
 }
 
